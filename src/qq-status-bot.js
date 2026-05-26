@@ -20,6 +20,7 @@ const DEFAULT_SCREENSHOT_HEIGHT = 1280;
 const DEFAULT_CAPTURE_PER_PAGE = 4;
 const DEFAULT_CAPTURE_MAX_PAGES = 8;
 const DEFAULT_COOLDOWN_MS = 30000;
+const DEFAULT_CAPTURE_CACHE_MS = 10000;
 const MAX_MESSAGE_BYTES = 2 * 1024 * 1024;
 const ADMIN_ROLES = new Set(["owner", "admin"]);
 
@@ -43,6 +44,7 @@ function createConfig(env = process.env) {
     capturePerPage: toPositiveInt(env.STATUS_CAPTURE_PER_PAGE, DEFAULT_CAPTURE_PER_PAGE),
     captureMaxPages: toPositiveInt(env.STATUS_CAPTURE_MAX_PAGES, DEFAULT_CAPTURE_MAX_PAGES),
     captureWindow: env.STATUS_CAPTURE_WINDOW || "90m",
+    captureCacheMs: toPositiveInt(env.STATUS_CAPTURE_CACHE_MS, DEFAULT_CAPTURE_CACHE_MS),
     cooldownMs: toPositiveInt(env.QQ_BOT_COOLDOWN_MS, DEFAULT_COOLDOWN_MS)
   };
 }
@@ -56,7 +58,9 @@ function startServer(config = createConfig()) {
   const state = {
     clients: new Set(),
     groupCooldowns: new Map(),
-    activeGroups: new Set()
+    activeGroups: new Set(),
+    captureJob: null,
+    captureCache: null
   };
 
   const server = http.createServer((req, res) => {
@@ -305,7 +309,11 @@ async function handleStatusRequest(client, event, config, state) {
   state.groupCooldowns.set(groupId, now);
 
   try {
-    const images = await captureStatusScreenshots(config);
+    const images = await getSharedCapture(
+      state,
+      () => captureStatusScreenshots(config),
+      { cacheMs: config.captureCacheMs }
+    );
     sendGroupMessage(client, groupId, [
       { type: "text", data: { text: buildScreenshotMessage(images.length) } },
       ...images.map((imageBase64) => ({ type: "image", data: { file: `base64://${imageBase64}` } }))
@@ -317,6 +325,38 @@ async function handleStatusRequest(client, event, config, state) {
   } finally {
     state.activeGroups.delete(groupId);
   }
+}
+
+async function getSharedCapture(state, factory, options = {}) {
+  const now = Date.now();
+  const cacheMs = Math.max(0, Number(options.cacheMs) || 0);
+  if (state.captureCache && state.captureCache.expiresAt > now) {
+    log("Reusing cached status screenshot batch");
+    return state.captureCache.images;
+  }
+
+  if (state.captureJob) {
+    log("Waiting for active status screenshot batch");
+    return state.captureJob;
+  }
+
+  const job = Promise.resolve()
+    .then(factory)
+    .then((images) => {
+      state.captureCache = {
+        images,
+        expiresAt: Date.now() + cacheMs
+      };
+      return images;
+    })
+    .finally(() => {
+      if (state.captureJob === job) {
+        state.captureJob = null;
+      }
+    });
+
+  state.captureJob = job;
+  return job;
 }
 
 function buildScreenshotMessage(count) {
@@ -383,12 +423,42 @@ function buildCapturePageUrl(config, page, pageCount, totalChecks = 0) {
 async function captureScreenshot(config, pageUrl = config.statusPageUrl) {
   await fs.mkdir(config.runtimeDir, { recursive: true });
 
-  const screenshotPath = path.join(
-    config.runtimeDir,
-    `status-${Date.now()}-${crypto.randomBytes(4).toString("hex")}.png`
-  );
+  const attempts = 2;
+  let lastError;
 
-  const args = [
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    const screenshotPath = path.join(
+      config.runtimeDir,
+      `status-${Date.now()}-${crypto.randomBytes(4).toString("hex")}.png`
+    );
+    const args = buildChromiumArgs(config, pageUrl, screenshotPath, attempt);
+    let result = {};
+
+    try {
+      result = await execFileAsync(config.chromiumBin, args, {
+        timeout: config.captureTimeoutMs + (attempt - 1) * 5000,
+        maxBuffer: 1024 * 1024
+      });
+
+      const image = await readScreenshotFile(screenshotPath, result);
+      return image.toString("base64");
+    } catch (error) {
+      lastError = normalizeCaptureError(error, result, attempt);
+      log(`Chromium screenshot attempt ${attempt}/${attempts} failed:`, lastError.message);
+      if (attempt < attempts) {
+        await delay(500);
+      }
+    } finally {
+      fs.unlink(screenshotPath).catch(() => {});
+    }
+  }
+
+  throw lastError || new Error("Chromium screenshot failed");
+}
+
+function buildChromiumArgs(config, pageUrl, screenshotPath, attempt = 1) {
+  const waitMs = config.screenshotWaitMs + (attempt - 1) * 1500;
+  return [
     "--headless=new",
     "--no-sandbox",
     "--disable-gpu",
@@ -397,21 +467,49 @@ async function captureScreenshot(config, pageUrl = config.statusPageUrl) {
     "--lang=zh-CN",
     "--run-all-compositor-stages-before-draw",
     `--window-size=${config.screenshotWidth},${config.screenshotHeight}`,
-    `--virtual-time-budget=${config.screenshotWaitMs}`,
+    `--virtual-time-budget=${waitMs}`,
     `--screenshot=${screenshotPath}`,
     pageUrl
   ];
+}
 
+async function readScreenshotFile(screenshotPath, result = {}) {
   try {
-    await execFileAsync(config.chromiumBin, args, {
-      timeout: config.captureTimeoutMs,
-      maxBuffer: 512 * 1024
-    });
-    const image = await fs.readFile(screenshotPath);
-    return image.toString("base64");
-  } finally {
-    fs.unlink(screenshotPath).catch(() => {});
+    return await fs.readFile(screenshotPath);
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+    const details = compactProcessOutput(result);
+    throw new Error(`Chromium exited without writing screenshot file${details ? ` (${details})` : ""}`);
   }
+}
+
+function normalizeCaptureError(error, result = {}, attempt = 1) {
+  if (error?.message?.includes("Chromium exited without writing screenshot file")) {
+    error.message = `attempt ${attempt}: ${error.message}`;
+    return error;
+  }
+
+  const details = compactProcessOutput({
+    stdout: error?.stdout || result.stdout,
+    stderr: error?.stderr || result.stderr
+  });
+  const message = error?.killed
+    ? `attempt ${attempt}: Chromium timed out after screenshot wait (${details || "no output"})`
+    : `attempt ${attempt}: ${error?.message || "Chromium screenshot failed"}${details ? ` (${details})` : ""}`;
+  return new Error(message);
+}
+
+function compactProcessOutput(result = {}) {
+  const output = [result.stderr, result.stdout]
+    .map((item) => String(item || "").trim())
+    .filter(Boolean)
+    .join(" / ")
+    .replace(/\s+/g, " ");
+  return output.length > 320 ? `${output.slice(0, 320)}...` : output;
+}
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function resolveBotIntent(event, trigger = DEFAULT_TRIGGER) {
@@ -573,6 +671,7 @@ module.exports = {
   buildScreenshotMessage,
   buildStatusApiUrl,
   createCapturePlan,
+  getSharedCapture,
   resolveBotIntent,
   shouldHandleEvent,
   isGroupAdmin,

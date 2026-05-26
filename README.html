@@ -846,6 +846,11 @@ kubectl -n api-relay-status get pods,svc,pvc</code></pre>
                   <td><code>STATUS_PAGE_URL</code></td>
                   <td>默认 <code>http://status-site:3210/?capture=qq</code>，机器人在集群内访问状态站。</td>
                 </tr>
+                <tr>
+                  <td>截图复用</td>
+                  <td><code>STATUS_CAPTURE_CACHE_MS=10000</code></td>
+                  <td>多个群短时间内同时触发时复用同一批截图，避免重复拉起 Chromium。</td>
+                </tr>
               </tbody>
             </table>
           </div>

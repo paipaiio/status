@@ -11,6 +11,7 @@ const {
   createConfig,
   encodeFrame,
   extractMessageText,
+  getSharedCapture,
   isGroupAdmin,
   isSettingsCommand,
   parseFrames,
@@ -87,6 +88,27 @@ test("createCapturePlan splits large status pages into readable screenshots", as
 test("buildScreenshotMessage labels multi-page screenshot batches", () => {
   assert.equal(buildScreenshotMessage(1), "状态检查截图如下：");
   assert.equal(buildScreenshotMessage(3), "状态检查截图如下（共 3 张）：");
+});
+
+test("getSharedCapture shares concurrent screenshot work and caches briefly", async () => {
+  const state = { captureJob: null, captureCache: null };
+  let calls = 0;
+  const factory = async () => {
+    calls += 1;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    return [`image-${calls}`];
+  };
+
+  const [first, second] = await Promise.all([
+    getSharedCapture(state, factory, { cacheMs: 1000 }),
+    getSharedCapture(state, factory, { cacheMs: 1000 })
+  ]);
+  const cached = await getSharedCapture(state, factory, { cacheMs: 1000 });
+
+  assert.deepEqual(first, ["image-1"]);
+  assert.deepEqual(second, ["image-1"]);
+  assert.deepEqual(cached, ["image-1"]);
+  assert.equal(calls, 1);
 });
 
 test("shouldHandleEvent matches group messages with the trigger", () => {

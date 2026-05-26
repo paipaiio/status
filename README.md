@@ -24,6 +24,7 @@
 QQ 机器人挂载 `qq-bot-data-pvc` 到 `/data/qq-bot`：
 
 - `/data/qq-bot/status-*.png`：截图临时文件，发送到 QQ 后会自动删除。
+- `STATUS_CAPTURE_CACHE_MS`：默认 `10000`，多个群短时间内同时触发时复用同一批截图，避免重复拉起 Chromium。
 
 ## 检测项配置方式
 
