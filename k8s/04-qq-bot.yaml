@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qq-status-bot
+  namespace: api-relay-status
+  labels:
+    app: qq-status-bot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: qq-status-bot
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: qq-status-bot
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: qq-status-bot
+          image: registry.example.com/api-relay-status:0.1.0
+          imagePullPolicy: IfNotPresent
+          command: ["node", "src/qq-status-bot.js"]
+          ports:
+            - name: onebot
+              containerPort: 3211
+          envFrom:
+            - configMapRef:
+                name: api-relay-status-config
+            - secretRef:
+                name: api-relay-status-secret
+          volumeMounts:
+            - name: qq-bot-data
+              mountPath: /data/qq-bot
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: onebot
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: onebot
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 150m
+              memory: 256Mi
+            limits:
+              cpu: 1500m
+              memory: 768Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: qq-bot-data
+          persistentVolumeClaim:
+            claimName: qq-bot-data-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: qq-status-bot
+  namespace: api-relay-status
+  labels:
+    app: qq-status-bot
+spec:
+  selector:
+    app: qq-status-bot
+  ports:
+    - name: onebot
+      port: 3211
+      targetPort: onebot

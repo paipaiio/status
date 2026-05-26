@@ -1,0 +1,12 @@
+.env
+.env.*
+!.env.example
+config/targets.json
+node_modules/
+coverage/
+dist/
+logs/
+runtime/
+*.log
+*.zip
+.DS_Store

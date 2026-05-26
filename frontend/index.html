@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>API 中转站状态检查</title>
+    <link rel="stylesheet" href="/styles.css?v=20260526-capture-v6">
+  </head>
+  <body>
+    <div class="status-page">
+      <header class="site-header">
+        <a class="brand" href="/" aria-label="API 中转站状态检查">
+          <span class="brand-mark" aria-hidden="true">API</span>
+          <span>
+            <strong>API 中转站状态</strong>
+            <small>Relay Status</small>
+          </span>
+        </a>
+
+        <div class="header-actions">
+          <span class="socket-badge socket-connecting" id="socketBadge">
+            <span class="socket-pulse" aria-hidden="true"></span>
+            <span id="socketState">连接中</span>
+          </span>
+          <span class="sync-time" id="syncTime">等待实时推送</span>
+          <a class="admin-link" href="/admin">后台</a>
+          <button class="icon-button" id="refreshButton" type="button" title="刷新状态" aria-label="刷新状态">↻</button>
+        </div>
+      </header>
+
+      <main>
+        <section class="overview-panel" aria-labelledby="overviewTitle">
+          <div class="overview-main">
+            <span class="overall-dot status-pending" id="overallDot"></span>
+            <div>
+              <p class="eyebrow">Current Status</p>
+              <h1 id="overviewTitle">正在加载状态</h1>
+              <p id="overviewText">后端会持续探测各中转站，前端只展示脱敏后的状态与可用度。</p>
+            </div>
+          </div>
+
+          <div class="overview-stats" aria-label="状态汇总">
+            <div>
+              <span>组件</span>
+              <strong id="totalCount">0</strong>
+            </div>
+            <div>
+              <span>正常</span>
+              <strong id="upCount">0</strong>
+            </div>
+            <div>
+              <span>偏慢</span>
+              <strong id="degradedCount">0</strong>
+            </div>
+            <div>
+              <span>异常</span>
+              <strong id="downCount">0</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="toolbar" id="adminPanel" hidden>
+          <label class="token-field">
+            <span>手动探测令牌</span>
+            <input id="manualToken" type="password" autocomplete="off" placeholder="MANUAL_CHECK_TOKEN">
+          </label>
+          <button class="primary-button" id="manualCheckButton" type="button">立即探测</button>
+          <button class="ghost-button" id="copyStatusApiButton" type="button">复制状态接口</button>
+        </section>
+
+        <section class="section-head" aria-labelledby="componentsTitle">
+          <div>
+            <p class="eyebrow">Components</p>
+            <h2 id="componentsTitle">服务可用度</h2>
+          </div>
+          <div class="window-tabs" role="tablist" aria-label="可用度窗口">
+            <button class="window-tab is-active" type="button" data-window="90m">90 分钟</button>
+            <button class="window-tab" type="button" data-window="24h">24 小时</button>
+            <button class="window-tab" type="button" data-window="7d">7 天</button>
+            <button class="window-tab" type="button" data-window="30d">30 天</button>
+          </div>
+        </section>
+
+        <section class="component-list" id="monitorList" aria-live="polite"></section>
+
+        <section class="annotation-panel" id="annotationPanel" aria-labelledby="annotationsTitle">
+          <div class="section-head compact">
+            <div>
+              <p class="eyebrow">Notes</p>
+              <h2 id="annotationsTitle">批注与稳定性提示</h2>
+            </div>
+          </div>
+          <div class="annotation-list" id="annotationList"></div>
+        </section>
+
+        <section class="empty-state" id="emptyState" hidden>
+          <h2>还没有配置监控项</h2>
+          <p>复制 <code>.env.example</code> 为 <code>.env</code>，按 <code>API_1_*</code>、<code>API_2_*</code> 填入中转站配置。</p>
+        </section>
+      </main>
+    </div>
+
+    <template id="checkCardTemplate">
+      <article class="component-card">
+        <div class="component-top">
+          <div class="component-title">
+            <span class="status-dot"></span>
+            <div>
+              <h3 class="check-name"></h3>
+              <p class="check-meta"></p>
+            </div>
+          </div>
+          <span class="status-label"></span>
+        </div>
+
+        <div class="window-metrics" aria-label="各时间窗口可用度">
+          <div data-metric="90m"><span>90 分钟</span><strong>-</strong></div>
+          <div data-metric="24h"><span>24 小时</span><strong>-</strong></div>
+          <div data-metric="7d"><span>7 天</span><strong>-</strong></div>
+          <div data-metric="30d"><span>30 天</span><strong>-</strong></div>
+        </div>
+
+        <div class="timeline-row">
+          <div>
+            <span class="timeline-label"></span>
+            <strong class="timeline-uptime"></strong>
+          </div>
+          <div class="timeline" aria-label="可用度时间线"></div>
+        </div>
+
+        <div class="component-meta-grid">
+          <div>
+            <span>延迟</span>
+            <strong class="latency"></strong>
+          </div>
+          <div>
+            <span>状态码</span>
+            <strong class="status-code"></strong>
+          </div>
+          <div>
+            <span>探测</span>
+            <strong class="probe-type"></strong>
+          </div>
+          <div>
+            <span>下次检查</span>
+            <strong class="next-check"></strong>
+          </div>
+        </div>
+
+        <p class="component-note" hidden></p>
+      </article>
+    </template>
+
+    <script src="/app.js?v=20260526-capture-v6" defer></script>
+  </body>
+</html>

@@ -1,0 +1,43 @@
+[
+  {
+    "id": "openai-relay",
+    "name": "OpenAI 中转站",
+    "group": "核心模型",
+    "description": "模型列表接口",
+    "url": "https://api.your-relay.example/v1/models",
+    "method": "GET",
+    "headers": {
+      "Authorization": "Bearer ${OPENAI_RELAY_API_KEY}"
+    },
+    "expectedStatus": [200],
+    "timeoutMs": 10000,
+    "intervalSeconds": 60,
+    "allowedLatencyMs": 2500
+  },
+  {
+    "id": "anthropic-relay",
+    "name": "Anthropic 中转站",
+    "group": "核心模型",
+    "description": "轻量消息探测",
+    "url": "https://api.your-relay.example/v1/messages",
+    "method": "POST",
+    "headers": {
+      "Authorization": "Bearer ${ANTHROPIC_RELAY_API_KEY}",
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "model": "claude-3-5-haiku-latest",
+      "max_tokens": 1,
+      "messages": [
+        {
+          "role": "user",
+          "content": "ping"
+        }
+      ]
+    },
+    "expectedStatus": [200],
+    "timeoutMs": 12000,
+    "intervalSeconds": 120,
+    "allowedLatencyMs": 4000
+  }
+]

@@ -1,0 +1,474 @@
+.admin-shell {
+  min-height: 100vh;
+  padding: 24px;
+  color: var(--on-primary);
+}
+
+[hidden] {
+  display: none !important;
+}
+
+.admin-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  min-height: 72px;
+  border: 1px solid var(--hairline-violet);
+  border-radius: 18px;
+  padding: 16px 20px;
+  background: var(--dark-canvas);
+}
+
+.admin-brand,
+.admin-nav-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.admin-brand span:last-child {
+  display: grid;
+  gap: 2px;
+}
+
+.admin-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-nav-link,
+.admin-logout {
+  min-height: 42px;
+  border: 1px solid var(--hairline-violet);
+  border-radius: 8px;
+  padding: 10px 14px;
+  background: var(--night);
+  color: var(--on-primary);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.admin-nav-link:hover,
+.admin-logout:hover {
+  background: var(--violet-mid);
+}
+
+.admin-workspace {
+  margin-top: 24px;
+}
+
+.admin-login-panel,
+.admin-console {
+  min-height: calc(100vh - 144px);
+}
+
+.admin-login-panel {
+  display: grid;
+  place-items: center;
+}
+
+.login-form,
+.target-form-panel,
+.managed-panel,
+.annotation-panel-admin {
+  border-radius: 18px;
+  border: 1px solid var(--hairline-violet);
+}
+
+.login-copy {
+  margin-bottom: 24px;
+}
+
+.login-copy h1,
+.panel-heading h1 {
+  max-width: 760px;
+  font-family: "Arial Black", Rubik, "Noto Sans CJK SC", "Noto Sans SC", system-ui, sans-serif;
+  font-size: clamp(44px, 6vw, 78px);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: 0;
+}
+
+.login-form {
+  display: grid;
+  gap: 18px;
+  width: min(420px, 100%);
+  padding: 32px;
+  background: var(--on-primary);
+  color: var(--ink-deep);
+}
+
+.login-form .eyebrow {
+  color: var(--violet-deep);
+}
+
+.admin-console {
+  display: grid;
+  grid-template-columns: minmax(440px, 0.92fr) minmax(0, 1.08fr);
+  gap: 24px;
+}
+
+.target-form-panel,
+.managed-panel,
+.annotation-panel-admin {
+  padding: 24px;
+  background: var(--on-primary);
+  color: var(--ink-deep);
+}
+
+.annotation-panel-admin {
+  grid-column: 1 / -1;
+}
+
+.panel-heading {
+  margin-bottom: 22px;
+}
+
+.panel-heading .eyebrow {
+  color: var(--violet-deep);
+}
+
+.panel-heading h2 {
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1.16;
+}
+
+.target-form,
+.annotation-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.annotation-workspace {
+  display: grid;
+  grid-template-columns: minmax(360px, 0.78fr) minmax(0, 1.22fr);
+  gap: 18px;
+}
+
+.wide-field {
+  grid-column: 1 / -1;
+}
+
+.login-form label,
+.target-form label,
+.annotation-form label {
+  display: grid;
+  gap: 8px;
+  color: var(--ink-deep);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.login-form input,
+.target-form input,
+.annotation-form input,
+.target-form select,
+.annotation-form select {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid var(--hairline-cloud);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fbfbfd;
+  color: var(--ink-deep);
+  font: inherit;
+}
+
+.target-form select,
+.annotation-form select {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--ink-deep) 50%),
+    linear-gradient(135deg, var(--ink-deep) 50%, transparent 50%);
+  background-position: calc(100% - 18px) 21px, calc(100% - 13px) 21px;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+
+.login-form input:focus,
+.target-form input:focus,
+.target-form select:focus,
+.annotation-form textarea:focus,
+.annotation-form select:focus {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.annotation-form textarea {
+  width: 100%;
+  min-height: 130px;
+  border: 1px solid var(--hairline-cloud);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fbfbfd;
+  color: var(--ink-deep);
+  font: inherit;
+  resize: vertical;
+}
+
+.checkbox-field {
+  display: flex !important;
+  align-items: center;
+  gap: 10px !important;
+  text-transform: none !important;
+}
+
+.checkbox-field input {
+  width: 18px;
+  min-height: 18px;
+}
+
+.admin-primary {
+  border-radius: 8px;
+  padding: 12px 18px;
+  background: var(--lime);
+  color: var(--ink-deep);
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.admin-secondary {
+  border: 1px solid var(--hairline-cloud);
+  border-radius: 8px;
+  padding: 10px 14px;
+  background: #fbfbfd;
+  color: var(--ink-deep);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.admin-secondary:hover {
+  background: var(--press);
+}
+
+.annotation-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-primary:hover {
+  background: #d6ff63;
+}
+
+.admin-primary:disabled,
+.delete-target:disabled,
+.admin-logout:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.managed-list,
+.annotation-list {
+  display: grid;
+  gap: 12px;
+}
+
+.managed-item,
+.annotation-admin-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid var(--hairline-cloud);
+  border-radius: 12px;
+  padding: 18px;
+  background: #fbfbfd;
+  box-shadow: var(--shadow-light);
+}
+
+.annotation-list-panel {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.annotation-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.annotation-list-head h3 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.managed-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.managed-name,
+.annotation-title {
+  margin: 0;
+  color: var(--ink-deep);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.managed-format {
+  background: var(--night);
+  color: var(--on-primary);
+}
+
+.managed-meta,
+.managed-key,
+.managed-empty,
+.annotation-body,
+.annotation-meta {
+  margin: 8px 0 0;
+  color: #5f5867;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.annotation-body {
+  color: var(--ink-deep);
+  font-size: 15px;
+}
+
+.annotation-meta {
+  font-family: Monaco, Menlo, Ubuntu Mono, monospace;
+  font-size: 12px;
+}
+
+.managed-key {
+  font-family: Monaco, Menlo, Ubuntu Mono, monospace;
+}
+
+.delete-target,
+.delete-annotation,
+.resolve-annotation {
+  flex: 0 0 auto;
+  min-height: 40px;
+  border-radius: 8px;
+  padding: 10px 14px;
+  background: var(--night);
+  color: var(--on-primary);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.resolve-annotation {
+  background: var(--lime);
+  color: var(--ink-deep);
+}
+
+.delete-target:hover,
+.delete-annotation:hover {
+  background: #c53030;
+}
+
+.annotation-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.annotation-warning .status-dot {
+  background: #b98500;
+}
+
+.annotation-critical .status-dot {
+  background: #c53030;
+}
+
+.annotation-success .status-dot {
+  background: #5f7d00;
+}
+
+.annotation-info .status-dot {
+  background: var(--violet);
+}
+
+.admin-message {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 10;
+  max-width: min(460px, calc(100vw - 48px));
+  min-height: 0;
+  border-radius: 8px;
+  padding: 0;
+  background: var(--lime);
+  color: var(--ink-deep);
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.5;
+  box-shadow: var(--shadow-light);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(8px);
+  transition: opacity 160ms ease, transform 160ms ease, padding 160ms ease;
+}
+
+.admin-message.is-visible {
+  padding: 12px 14px;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (max-width: 980px) {
+  .admin-login-panel,
+  .admin-console {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-login-panel,
+  .admin-console {
+    min-height: 0;
+  }
+
+  .login-copy,
+  .login-form {
+    min-height: 360px;
+  }
+}
+
+@media (max-width: 720px) {
+  .admin-shell {
+    padding: 10px;
+  }
+
+  .admin-topbar,
+  .managed-item {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-nav {
+    justify-content: space-between;
+  }
+
+  .target-form {
+    grid-template-columns: 1fr;
+  }
+
+  .annotation-workspace,
+  .annotation-form {
+    grid-template-columns: 1fr;
+  }
+
+  .login-copy,
+  .login-form,
+  .target-form-panel,
+  .managed-panel,
+  .annotation-panel-admin {
+    padding: 18px;
+  }
+}

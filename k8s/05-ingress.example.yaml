@@ -1,0 +1,31 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api-relay-status
+  namespace: api-relay-status
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: status.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: status-site
+                port:
+                  number: 3210
+    - host: onebot.example.com
+      http:
+        paths:
+          - path: /onebot
+            pathType: Prefix
+            backend:
+              service:
+                name: qq-status-bot
+                port:
+                  number: 3211

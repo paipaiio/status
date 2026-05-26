@@ -1,0 +1,1093 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>API 中转站状态监测 K8s 部署手册</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f5f7f8;
+        --panel: #ffffff;
+        --panel-soft: #eef3f2;
+        --ink: #18212f;
+        --muted: #617080;
+        --line: #d7e0df;
+        --line-strong: #afbfbd;
+        --green: #249160;
+        --green-soft: #e6f6ee;
+        --blue: #2563eb;
+        --blue-soft: #eaf1ff;
+        --red: #c2413d;
+        --red-soft: #fff0f0;
+        --dark: #162230;
+        --code: #101827;
+        --code-line: #233143;
+        --focus: rgba(37, 99, 235, 0.22);
+        --shadow: 0 12px 32px rgba(24, 33, 47, 0.08);
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: Inter, "Noto Sans CJK SC", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+        line-height: 1.58;
+      }
+
+      a { color: inherit; }
+      button, input, select { font: inherit; }
+      button { cursor: pointer; }
+      h1, h2, h3, p { margin: 0; }
+
+      .shell {
+        display: grid;
+        grid-template-columns: 280px minmax(0, 1fr);
+        gap: 24px;
+        width: min(1440px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 24px 0 64px;
+      }
+
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        grid-column: 1 / -1;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 14px 16px;
+        background: rgba(255, 255, 255, 0.94);
+        backdrop-filter: blur(10px);
+        box-shadow: var(--shadow);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
+      }
+
+      .mark {
+        display: grid;
+        place-items: center;
+        width: 42px;
+        height: 42px;
+        border-radius: 8px;
+        background: var(--dark);
+        color: #9ee6bd;
+        font: 700 13px/1 Monaco, Menlo, monospace;
+      }
+
+      .brand-title {
+        display: grid;
+        gap: 2px;
+        min-width: 0;
+      }
+
+      .brand-title strong {
+        overflow: hidden;
+        color: var(--ink);
+        font-size: 16px;
+        line-height: 1.25;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .brand-title span {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .toolbar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      .search {
+        width: min(360px, 38vw);
+        min-height: 38px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 8px 12px;
+        background: #fff;
+        color: var(--ink);
+      }
+
+      .copy-all {
+        min-height: 38px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 8px 12px;
+        background: var(--dark);
+        color: #fff;
+        font-weight: 800;
+      }
+
+      .sidebar {
+        position: sticky;
+        top: 102px;
+        align-self: start;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 14px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+      }
+
+      .sidebar h2 {
+        margin-bottom: 10px;
+        font-size: 13px;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .nav-list {
+        display: grid;
+        gap: 6px;
+      }
+
+      .nav-list a {
+        border-radius: 8px;
+        padding: 8px 10px;
+        color: var(--muted);
+        font-size: 14px;
+        font-weight: 750;
+        text-decoration: none;
+      }
+
+      .nav-list a:hover,
+      .nav-list a.active {
+        background: var(--blue-soft);
+        color: var(--blue);
+      }
+
+      .main {
+        display: grid;
+        gap: 18px;
+        min-width: 0;
+      }
+
+      .section {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 22px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+      }
+
+      .section-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 18px;
+      }
+
+      .section h1 {
+        max-width: 900px;
+        font-size: clamp(28px, 5vw, 52px);
+        line-height: 1.05;
+        letter-spacing: 0;
+      }
+
+      .section h2 {
+        font-size: 26px;
+        line-height: 1.2;
+        letter-spacing: 0;
+      }
+
+      .section h3 {
+        margin-bottom: 8px;
+        font-size: 18px;
+      }
+
+      .lead {
+        max-width: 920px;
+        margin-top: 12px;
+        color: var(--muted);
+        font-size: 16px;
+      }
+
+      .tag-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 16px;
+      }
+
+      .tag {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 5px 10px;
+        background: var(--panel-soft);
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .item {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 14px;
+        background: #fff;
+      }
+
+      .item p {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .notice {
+        border: 1px solid var(--line-strong);
+        border-left: 4px solid var(--blue);
+        border-radius: 8px;
+        padding: 14px;
+        background: var(--blue-soft);
+      }
+
+      .notice strong { display: block; margin-bottom: 4px; }
+      .notice p { color: var(--muted); }
+
+      .steps {
+        display: grid;
+        gap: 14px;
+        counter-reset: step;
+      }
+
+      .step {
+        position: relative;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 16px 16px 16px 52px;
+        background: #fff;
+        counter-increment: step;
+      }
+
+      .step::before {
+        content: counter(step);
+        position: absolute;
+        left: 14px;
+        top: 16px;
+        display: grid;
+        place-items: center;
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        background: var(--dark);
+        color: #fff;
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .code-wrap {
+        position: relative;
+        margin-top: 12px;
+        border-radius: 8px;
+        overflow: hidden;
+        background: var(--code);
+      }
+
+      .code-wrap pre {
+        margin: 0;
+        padding: 42px 14px 14px;
+        overflow-x: auto;
+        color: #e6edf6;
+        font: 13px/1.55 Monaco, Menlo, Ubuntu Mono, Consolas, monospace;
+      }
+
+      .code-title {
+        position: absolute;
+        left: 12px;
+        top: 10px;
+        color: #9fb0c3;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .copy {
+        position: absolute;
+        right: 8px;
+        top: 8px;
+        min-height: 28px;
+        border: 1px solid var(--code-line);
+        border-radius: 8px;
+        padding: 4px 9px;
+        background: #fff;
+        color: var(--ink);
+        font-size: 12px;
+        font-weight: 850;
+      }
+
+      .table-scroll {
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 780px;
+        background: #fff;
+      }
+
+      th, td {
+        border-bottom: 1px solid var(--line);
+        padding: 11px 12px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: var(--panel-soft);
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+      }
+
+      td code,
+      p code,
+      li code {
+        border-radius: 5px;
+        padding: 2px 6px;
+        background: var(--panel-soft);
+        color: var(--ink);
+        font-family: Monaco, Menlo, Ubuntu Mono, Consolas, monospace;
+        font-size: 0.92em;
+      }
+
+      ul {
+        margin: 10px 0 0;
+        padding-left: 20px;
+      }
+
+      li + li { margin-top: 6px; }
+
+      .param-panel {
+        display: grid;
+        grid-template-columns: minmax(260px, 0.82fr) minmax(0, 1.18fr);
+        gap: 14px;
+      }
+
+      .controls {
+        display: grid;
+        gap: 12px;
+      }
+
+      .control {
+        display: grid;
+        gap: 6px;
+      }
+
+      .control label {
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .control input,
+      .control select {
+        min-height: 38px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 8px 10px;
+        background: #fff;
+        color: var(--ink);
+      }
+
+      .switch-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 10px;
+        background: #fff;
+      }
+
+      .switch-row input { width: 18px; height: 18px; }
+
+      .toast {
+        position: fixed;
+        right: 20px;
+        bottom: 20px;
+        z-index: 40;
+        border-radius: 8px;
+        padding: 10px 12px;
+        background: var(--dark);
+        color: #fff;
+        font-size: 13px;
+        font-weight: 800;
+        opacity: 0;
+        transform: translateY(8px);
+        pointer-events: none;
+        transition: opacity 160ms ease, transform 160ms ease;
+      }
+
+      .toast.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      @media (max-width: 980px) {
+        .shell {
+          grid-template-columns: 1fr;
+          width: min(100% - 20px, 900px);
+        }
+
+        .sidebar {
+          position: static;
+        }
+
+        .nav-list {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .grid,
+        .grid-3,
+        .param-panel {
+          grid-template-columns: 1fr;
+        }
+
+        .search {
+          width: 100%;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .topbar,
+        .section-head {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .toolbar {
+          justify-content: stretch;
+        }
+
+        .copy-all {
+          width: 100%;
+        }
+
+        .section {
+          padding: 16px;
+        }
+
+        .nav-list {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <header class="topbar">
+        <div class="brand">
+          <span class="mark">API</span>
+          <span class="brand-title">
+            <strong>API 中转站状态监测 K8s 部署手册</strong>
+            <span>监测站、后台、接口、QQ 机器人、PVC 数据路径一次整理</span>
+          </span>
+        </div>
+        <div class="toolbar">
+          <input class="search" id="search" type="search" placeholder="搜索接口、PVC、NapCat、Secret">
+          <button class="copy-all" type="button" data-copy="#quickCommands">复制快速部署命令</button>
+        </div>
+      </header>
+
+      <aside class="sidebar" aria-label="目录">
+        <h2>目录</h2>
+        <nav class="nav-list">
+          <a href="#overview">部署包总览</a>
+          <a href="#files">文件清单</a>
+          <a href="#storage">PVC 数据路径</a>
+          <a href="#config">配置与密钥</a>
+          <a href="#deploy">部署步骤</a>
+          <a href="#napcat">QQ 机器人</a>
+          <a href="#api">接口调用</a>
+          <a href="#ops">运维命令</a>
+          <a href="#preview">参数预览</a>
+        </nav>
+      </aside>
+
+      <main class="main">
+        <section class="section" id="overview" data-search="k8s docker status site qq bot pvc">
+          <div class="section-head">
+            <div>
+              <h1>一套镜像，两组 Deployment，数据进 PVC</h1>
+              <p class="lead">这个项目现在可以按 Kubernetes 方式部署：同一个 Docker 镜像同时包含状态监测站和 QQ 群截图机器人。K8s 里拆成 `status-site` 和 `qq-status-bot` 两个 Deployment，分别暴露服务，分别挂载 PVC。</p>
+              <div class="tag-row">
+                <span class="tag">Node.js 22</span>
+                <span class="tag">Chromium 截图</span>
+                <span class="tag">PVC 持久化</span>
+                <span class="tag">NapCat 反向 WebSocket</span>
+                <span class="tag">无前端构建步骤</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-3">
+            <article class="item">
+              <h3>状态站</h3>
+              <p>`node src/server.js`，监听 `3210`，提供首页、后台、状态 API、WebSocket `/socket`。</p>
+            </article>
+            <article class="item">
+              <h3>QQ 机器人</h3>
+              <p>`node src/qq-status-bot.js`，监听 `3211/onebot`，NapCat 连接后群内发送触发词返回截图。</p>
+            </article>
+            <article class="item">
+              <h3>数据存储</h3>
+              <p>状态历史、后台动态模型、批注、QQ 临时截图都写到 `/data` 下，由 PVC 持久化。</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="section" id="files" data-search="file dockerfile k8s yaml secret ingress kustomize">
+          <div class="section-head">
+            <div>
+              <h2>文件清单</h2>
+              <p class="lead">这次新增的是 K8s 部署需要的最小完整集合。</p>
+            </div>
+          </div>
+
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>路径</th>
+                  <th>用途</th>
+                  <th>是否要改</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>Dockerfile</code></td>
+                  <td>构建统一镜像，内置 Node.js、Chromium、中文字体。</td>
+                  <td>通常不用改。</td>
+                </tr>
+                <tr>
+                  <td><code>.dockerignore</code></td>
+                  <td>排除 `.env`、运行时数据、Git、旧归档等内容，避免打进镜像。</td>
+                  <td>通常不用改。</td>
+                </tr>
+                <tr>
+                  <td><code>k8s/00-namespace.yaml</code></td>
+                  <td>创建命名空间 <code>api-relay-status</code>。</td>
+                  <td>要换命名空间时改。</td>
+                </tr>
+                <tr>
+                  <td><code>k8s/01-configmap.yaml</code></td>
+                  <td>保存非敏感配置，包括端口、路径、截图参数、状态页 URL。</td>
+                  <td>生产域名和截图参数建议改。</td>
+                </tr>
+                <tr>
+                  <td><code>k8s/02-pvc.yaml</code></td>
+                  <td>创建 `status-data-pvc` 和 `qq-bot-data-pvc`。</td>
+                  <td>按集群 StorageClass 和容量调整。</td>
+                </tr>
+                <tr>
+                  <td><code>k8s/03-status-site.yaml</code></td>
+                  <td>状态站 Deployment 和 Service。</td>
+                  <td>需要替换镜像地址。</td>
+                </tr>
+                <tr>
+                  <td><code>k8s/04-qq-bot.yaml</code></td>
+                  <td>QQ 机器人 Deployment 和 Service。</td>
+                  <td>需要替换镜像地址。</td>
+                </tr>
+                <tr>
+                  <td><code>k8s/05-ingress.example.yaml</code></td>
+                  <td>状态页和 OneBot 反向 WebSocket 的 Ingress 示例。</td>
+                  <td>按你的域名和 IngressClass 改。</td>
+                </tr>
+                <tr>
+                  <td><code>k8s/examples/secret.example.yaml</code></td>
+                  <td>Secret 模板，放后台密码、接口 Token、OneBot Token。</td>
+                  <td>必须复制后替换真实值。</td>
+                </tr>
+                <tr>
+                  <td><code>k8s/examples/initial-target-secret-fields.example.yaml</code></td>
+                  <td>可选的初始检测项字段示例。后台添加模型后会写入 PVC，不强制用 env 配。</td>
+                  <td>只在想用 Secret 固定初始化检测项时参考。</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="section" id="storage" data-search="pvc path data runtime annotations targets history screenshot">
+          <div class="section-head">
+            <div>
+              <h2>PVC 数据路径</h2>
+              <p class="lead">K8s 里不再依赖 `.env` 文件或本机 `runtime/`。所有会变的数据都通过环境变量指向 `/data`，再由 PVC 接住。</p>
+            </div>
+          </div>
+
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>PVC</th>
+                  <th>容器挂载点</th>
+                  <th>实际文件</th>
+                  <th>内容</th>
+                  <th>是否敏感</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>status-data-pvc</code></td>
+                  <td><code>/data</code></td>
+                  <td><code>/data/config/targets.json</code></td>
+                  <td>后台动态新增的检测模型，包含 Base URL、模型、API Key。</td>
+                  <td>敏感，PVC 备份要加密。</td>
+                </tr>
+                <tr>
+                  <td><code>status-data-pvc</code></td>
+                  <td><code>/data</code></td>
+                  <td><code>/data/runtime/status-history.json</code></td>
+                  <td>状态历史记录，用于 90 分钟、24 小时、7 天、30 天可用度。</td>
+                  <td>一般不敏感。</td>
+                </tr>
+                <tr>
+                  <td><code>status-data-pvc</code></td>
+                  <td><code>/data</code></td>
+                  <td><code>/data/runtime/annotations.json</code></td>
+                  <td>后台和外部接口写入的批注、维护说明、告警状态。</td>
+                  <td>可能敏感。</td>
+                </tr>
+                <tr>
+                  <td><code>qq-bot-data-pvc</code></td>
+                  <td><code>/data/qq-bot</code></td>
+                  <td><code>/data/qq-bot/status-*.png</code></td>
+                  <td>QQ 截图临时文件，发送后会删除。</td>
+                  <td>通常不需要长期保留。</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="notice" style="margin-top: 14px;">
+            <strong>关键点</strong>
+            <p>`config/targets.example.json` 仍然在镜像内，真正的后台动态数据不要挂载到 `/app/config`，而是写到 `/data/config/targets.json`。这样不会把镜像里的代码和示例配置盖掉。</p>
+          </div>
+        </section>
+
+        <section class="section" id="config" data-search="configmap secret env api key admin token">
+          <div class="section-head">
+            <div>
+              <h2>配置与密钥</h2>
+              <p class="lead">非敏感值放 ConfigMap，账号、Token、API Key 放 Secret。生产环境不要把真实 Secret 提交到仓库。</p>
+            </div>
+          </div>
+
+          <div class="grid">
+            <article class="item">
+              <h3>ConfigMap 重点项</h3>
+              <ul>
+                <li><code>FRONTEND_ORIGIN</code>：状态页公网域名。</li>
+                <li><code>STATUS_PAGE_URL</code>：QQ 机器人截图打开的地址，默认用集群内服务 <code>http://status-site:3210/?capture=qq</code>。</li>
+                <li><code>MANAGED_TARGETS_FILE</code>：固定为 <code>/data/config/targets.json</code>。</li>
+                <li><code>STATUS_HISTORY_FILE</code>：固定为 <code>/data/runtime/status-history.json</code>。</li>
+                <li><code>ANNOTATIONS_FILE</code>：固定为 <code>/data/runtime/annotations.json</code>。</li>
+              </ul>
+            </article>
+            <article class="item">
+              <h3>Secret 重点项</h3>
+              <ul>
+                <li><code>ADMIN_USERNAME</code>、<code>ADMIN_PASSWORD</code>：后台登录。</li>
+                <li><code>MANUAL_CHECK_TOKEN</code>：手动触发检测接口。</li>
+                <li><code>ANNOTATION_API_TOKEN</code>：外部系统写批注接口。</li>
+                <li><code>ONEBOT_SHARED_TOKEN</code>：NapCat 反向 WebSocket Bearer Token。</li>
+                <li><code>API_1_*</code>：可选初始中转站配置。更推荐在后台 `/admin` 添加，写入 PVC。</li>
+              </ul>
+            </article>
+          </div>
+
+          <div class="code-wrap">
+            <span class="code-title">k8s/examples/secret.example.yaml</span>
+            <button class="copy" type="button" data-copy="#secretExample">复制</button>
+            <pre id="secretExample"><code>apiVersion: v1
+kind: Secret
+metadata:
+  name: api-relay-status-secret
+  namespace: api-relay-status
+type: Opaque
+stringData:
+  ADMIN_USERNAME: "root"
+  ADMIN_PASSWORD: "change-me-admin-password"
+  MANUAL_CHECK_TOKEN: "change-me-manual-check-token"
+  ANNOTATION_API_TOKEN: "change-me-annotation-token"
+  NOTIFICATION_WEBHOOK_TOKEN: ""
+  ONEBOT_SHARED_TOKEN: ""</code></pre>
+          </div>
+
+          <div class="notice" style="margin-top: 14px;">
+            <strong>检测项不必写在 env 里</strong>
+            <p>服务可以先以 0 个检测项启动，然后登录后台 `/admin` 添加模型。后台添加的数据会写入 PVC 的 <code>/data/config/targets.json</code>。只有你希望 K8s Secret 在每次启动时固定注入一批初始检测项，才需要参考 <code>k8s/examples/initial-target-secret-fields.example.yaml</code> 添加 <code>API_1_*</code> 字段。</p>
+          </div>
+        </section>
+
+        <section class="section" id="deploy" data-search="build docker kubectl deploy rollout image">
+          <div class="section-head">
+            <div>
+              <h2>部署步骤</h2>
+              <p class="lead">下面命令按“构建镜像、创建 Secret、部署 K8s、检查状态”的顺序走。</p>
+            </div>
+          </div>
+
+          <div class="code-wrap">
+            <span class="code-title">快速部署命令</span>
+            <button class="copy" type="button" data-copy="#quickCommands">复制</button>
+            <pre id="quickCommands"><code>IMAGE=registry.example.com/api-relay-status:0.1.0
+
+docker build -t "$IMAGE" .
+docker push "$IMAGE"
+
+kubectl apply -f k8s/00-namespace.yaml
+cp k8s/examples/secret.example.yaml /tmp/api-relay-status-secret.yaml
+vim /tmp/api-relay-status-secret.yaml
+kubectl apply -f /tmp/api-relay-status-secret.yaml
+
+kubectl apply -k k8s
+kubectl -n api-relay-status rollout status deploy/status-site
+kubectl -n api-relay-status rollout status deploy/qq-status-bot
+kubectl -n api-relay-status get pods,svc,pvc</code></pre>
+          </div>
+
+          <div class="steps" style="margin-top: 14px;">
+            <article class="step">
+              <h3>替换镜像地址</h3>
+              <p>把 <code>k8s/kustomization.yaml</code>、<code>k8s/03-status-site.yaml</code>、<code>k8s/04-qq-bot.yaml</code> 里的 <code>registry.example.com/api-relay-status:0.1.0</code> 换成你自己的镜像。</p>
+            </article>
+            <article class="step">
+              <h3>创建 Secret</h3>
+              <p>复制 <code>k8s/examples/secret.example.yaml</code> 到临时文件，填真实后台密码和 Token 后再 apply。检测项可以部署后从后台添加，不必在 Secret 里预先写 API Key。</p>
+            </article>
+            <article class="step">
+              <h3>部署主资源</h3>
+              <p><code>kubectl apply -k k8s</code> 会创建 Namespace、ConfigMap、PVC、状态站、QQ 机器人。Ingress 示例默认不在 kustomization 里，确认域名后再单独 apply。</p>
+            </article>
+            <article class="step">
+              <h3>检查健康状态</h3>
+              <p>状态站探针走 <code>/api/health</code>，QQ 机器人探针走 <code>/health</code>。两个 Deployment 都 ready 后，再接 Ingress 或 NapCat。</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="section" id="napcat" data-search="qq bot napcat onebot websocket">
+          <div class="section-head">
+            <div>
+              <h2>QQ 机器人接入</h2>
+              <p class="lead">NapCat 使用 OneBot 反向 WebSocket 主动连接本项目。群里发送完整触发词 `状态检查` 后，机器人打开状态页截图并发送 base64 图片。</p>
+            </div>
+          </div>
+
+          <div class="grid">
+            <article class="item">
+              <h3>NapCat 在同一个 K8s 集群</h3>
+              <p>反向 WebSocket 地址填集群内 Service。</p>
+              <div class="code-wrap">
+                <span class="code-title">集群内地址</span>
+                <button class="copy" type="button" data-copy="#napcatInternal">复制</button>
+                <pre id="napcatInternal"><code>ws://qq-status-bot.api-relay-status.svc.cluster.local:3211/onebot</code></pre>
+              </div>
+            </article>
+            <article class="item">
+              <h3>NapCat 在集群外</h3>
+              <p>先改好 <code>k8s/05-ingress.example.yaml</code>，再用公网域名连接。</p>
+              <div class="code-wrap">
+                <span class="code-title">公网地址</span>
+                <button class="copy" type="button" data-copy="#napcatExternal">复制</button>
+                <pre id="napcatExternal"><code>wss://onebot.example.com/onebot</code></pre>
+              </div>
+            </article>
+          </div>
+
+          <div class="notice" style="margin-top: 14px;">
+            <strong>Token 配置</strong>
+            <p>如果 <code>ONEBOT_SHARED_TOKEN</code> 非空，NapCat 也要配置同一个 access token。项目会校验 <code>Authorization: Bearer &lt;ONEBOT_SHARED_TOKEN&gt;</code>。</p>
+          </div>
+        </section>
+
+        <section class="section" id="api" data-search="api curl health status admin annotation check">
+          <div class="section-head">
+            <div>
+              <h2>接口调用速查</h2>
+              <p class="lead">对外域名走 Ingress，本地排障可以用 port-forward。</p>
+            </div>
+          </div>
+
+          <div class="code-wrap">
+            <span class="code-title">先转发状态站</span>
+            <button class="copy" type="button" data-copy="#portForward">复制</button>
+            <pre id="portForward"><code>kubectl -n api-relay-status port-forward svc/status-site 3210:3210
+BASE=http://127.0.0.1:3210</code></pre>
+          </div>
+
+          <div class="grid" style="margin-top: 14px;">
+            <article class="item">
+              <h3>公开查询</h3>
+              <div class="code-wrap">
+                <span class="code-title">公开接口</span>
+                <button class="copy" type="button" data-copy="#publicApi">复制</button>
+                <pre id="publicApi"><code>curl "$BASE/api/health"
+curl "$BASE/api/status"
+curl "$BASE/api/config"</code></pre>
+              </div>
+            </article>
+            <article class="item">
+              <h3>手动触发检测</h3>
+              <div class="code-wrap">
+                <span class="code-title">需要 MANUAL_CHECK_TOKEN</span>
+                <button class="copy" type="button" data-copy="#checkApi">复制</button>
+                <pre id="checkApi"><code>curl -X POST "$BASE/api/check" \
+  -H "X-Admin-Token: $MANUAL_CHECK_TOKEN"
+
+curl -X POST "$BASE/api/check?target=api-1" \
+  -H "X-Admin-Token: $MANUAL_CHECK_TOKEN"</code></pre>
+              </div>
+            </article>
+            <article class="item">
+              <h3>后台登录 Cookie</h3>
+              <div class="code-wrap">
+                <span class="code-title">后台接口</span>
+                <button class="copy" type="button" data-copy="#adminApi">复制</button>
+                <pre id="adminApi"><code>curl -c /tmp/status-cookie.txt -X POST "$BASE/api/admin/login" \
+  -H "Content-Type: application/json" \
+  -d '{"username":"root","password":"change-me-admin-password"}'
+
+curl -b /tmp/status-cookie.txt "$BASE/api/admin/targets"
+curl -b /tmp/status-cookie.txt "$BASE/api/admin/annotations"</code></pre>
+              </div>
+            </article>
+            <article class="item">
+              <h3>外部写批注</h3>
+              <div class="code-wrap">
+                <span class="code-title">需要 ANNOTATION_API_TOKEN</span>
+                <button class="copy" type="button" data-copy="#integrationApi">复制</button>
+                <pre id="integrationApi"><code>curl -X POST "$BASE/api/integrations/annotations" \
+  -H "Content-Type: application/json" \
+  -H "X-Annotation-Token: $ANNOTATION_API_TOKEN" \
+  -d '{
+    "title": "自动告警",
+    "body": "外部监控发现请求失败率升高。",
+    "level": "critical",
+    "targetId": "api-1",
+    "notify": true
+  }'</code></pre>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="section" id="ops" data-search="logs rollout pvc exec debug kubectl">
+          <div class="section-head">
+            <div>
+              <h2>运维命令</h2>
+              <p class="lead">这些命令用于看日志、确认 PVC 文件、重启和排障。</p>
+            </div>
+          </div>
+
+          <div class="grid">
+            <article class="item">
+              <h3>查看日志</h3>
+              <div class="code-wrap">
+                <span class="code-title">logs</span>
+                <button class="copy" type="button" data-copy="#logsCmd">复制</button>
+                <pre id="logsCmd"><code>kubectl -n api-relay-status logs deploy/status-site -f
+kubectl -n api-relay-status logs deploy/qq-status-bot -f</code></pre>
+              </div>
+            </article>
+            <article class="item">
+              <h3>确认数据文件</h3>
+              <div class="code-wrap">
+                <span class="code-title">pvc files</span>
+                <button class="copy" type="button" data-copy="#pvcCmd">复制</button>
+                <pre id="pvcCmd"><code>kubectl -n api-relay-status exec deploy/status-site -- ls -lah /data/runtime /data/config
+kubectl -n api-relay-status exec deploy/status-site -- cat /data/runtime/status-history.json
+kubectl -n api-relay-status exec deploy/status-site -- cat /data/runtime/annotations.json</code></pre>
+              </div>
+            </article>
+            <article class="item">
+              <h3>重启服务</h3>
+              <div class="code-wrap">
+                <span class="code-title">restart</span>
+                <button class="copy" type="button" data-copy="#restartCmd">复制</button>
+                <pre id="restartCmd"><code>kubectl -n api-relay-status rollout restart deploy/status-site
+kubectl -n api-relay-status rollout restart deploy/qq-status-bot
+kubectl -n api-relay-status rollout status deploy/status-site
+kubectl -n api-relay-status rollout status deploy/qq-status-bot</code></pre>
+              </div>
+            </article>
+            <article class="item">
+              <h3>检查服务</h3>
+              <div class="code-wrap">
+                <span class="code-title">status</span>
+                <button class="copy" type="button" data-copy="#statusCmd">复制</button>
+                <pre id="statusCmd"><code>kubectl -n api-relay-status get pods,svc,pvc
+kubectl -n api-relay-status describe pod -l app=status-site
+kubectl -n api-relay-status describe pod -l app=qq-status-bot</code></pre>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="section" id="preview" data-search="interactive preview command generator">
+          <div class="section-head">
+            <div>
+              <h2>参数预览</h2>
+              <p class="lead">填你的镜像、域名、端口和容量，下面会生成对应命令片段，方便复制。</p>
+            </div>
+          </div>
+
+          <div class="param-panel">
+            <div class="controls">
+              <div class="control">
+                <label for="pImage">镜像地址</label>
+                <input id="pImage" value="registry.example.com/api-relay-status:0.1.0">
+              </div>
+              <div class="control">
+                <label for="pNamespace">命名空间</label>
+                <input id="pNamespace" value="api-relay-status">
+              </div>
+              <div class="control">
+                <label for="pStatusHost">状态页域名</label>
+                <input id="pStatusHost" value="status.example.com">
+              </div>
+              <div class="control">
+                <label for="pOnebotHost">OneBot 域名</label>
+                <input id="pOnebotHost" value="onebot.example.com">
+              </div>
+              <div class="control">
+                <label for="pStorage">状态数据 PVC 容量</label>
+                <select id="pStorage">
+                  <option value="2Gi">2Gi</option>
+                  <option value="5Gi">5Gi</option>
+                  <option value="10Gi">10Gi</option>
+                </select>
+              </div>
+              <label class="switch-row">
+                <input id="pExposeBot" type="checkbox" checked>
+                <span>需要通过 Ingress 暴露 QQ 机器人</span>
+              </label>
+            </div>
+
+            <div class="code-wrap">
+              <span class="code-title">生成预览</span>
+              <button class="copy" type="button" data-copy="#previewCode">复制</button>
+              <pre id="previewCode"><code></code></pre>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite">已复制</div>
+
+    <script>
+      const toast = document.querySelector("#toast");
+      const search = document.querySelector("#search");
+      const navLinks = [...document.querySelectorAll(".nav-list a")];
+      const sections = [...document.querySelectorAll(".section")];
+      const previewInputs = ["#pImage", "#pNamespace", "#pStatusHost", "#pOnebotHost", "#pStorage", "#pExposeBot"]
+        .map((selector) => document.querySelector(selector));
+
+      document.addEventListener("click", async (event) => {
+        const button = event.target.closest("[data-copy]");
+        if (!button) return;
+        const target = document.querySelector(button.dataset.copy);
+        if (!target) return;
+        await navigator.clipboard.writeText(target.innerText.trim());
+        showToast("已复制");
+      });
+
+      search.addEventListener("input", () => {
+        const query = search.value.trim().toLowerCase();
+        for (const section of sections) {
+          const text = `${section.innerText} ${section.dataset.search || ""}`.toLowerCase();
+          section.style.display = !query || text.includes(query) ? "" : "none";
+        }
+      });
+
+      const observer = new IntersectionObserver((entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (!visible) return;
+        navLinks.forEach((link) => {
+          link.classList.toggle("active", link.getAttribute("href") === `#${visible.target.id}`);
+        });
+      }, { rootMargin: "-20% 0px -68% 0px", threshold: [0.1, 0.3, 0.6] });
+
+      sections.forEach((section) => observer.observe(section));
+      previewInputs.forEach((input) => input.addEventListener("input", updatePreview));
+      previewInputs.forEach((input) => input.addEventListener("change", updatePreview));
+      updatePreview();
+
+      function updatePreview() {
+        const image = value("#pImage");
+        const namespace = value("#pNamespace");
+        const statusHost = value("#pStatusHost");
+        const onebotHost = value("#pOnebotHost");
+        const storage = value("#pStorage");
+        const exposeBot = document.querySelector("#pExposeBot").checked;
+        const onebotBlock = exposeBot
+          ? `kubectl -n ${namespace} apply -f k8s/05-ingress.example.yaml
+NapCat URL: wss://${onebotHost}/onebot`
+          : `NapCat URL: ws://qq-status-bot.${namespace}.svc.cluster.local:3211/onebot`;
+
+        document.querySelector("#previewCode code").textContent = `IMAGE=${image}
+NAMESPACE=${namespace}
+STATUS_HOST=${statusHost}
+STATUS_DATA_SIZE=${storage}
+
+docker build -t "$IMAGE" .
+docker push "$IMAGE"
+
+kubectl apply -f k8s/00-namespace.yaml
+kubectl -n "$NAMESPACE" apply -f /tmp/api-relay-status-secret.yaml
+kubectl apply -k k8s
+kubectl -n "$NAMESPACE" rollout status deploy/status-site
+kubectl -n "$NAMESPACE" rollout status deploy/qq-status-bot
+
+Status URL: https://${statusHost}
+${onebotBlock}`;
+      }
+
+      function value(selector) {
+        return document.querySelector(selector).value.trim();
+      }
+
+      function showToast(text) {
+        toast.textContent = text;
+        toast.classList.add("show");
+        window.clearTimeout(showToast.timer);
+        showToast.timer = window.setTimeout(() => toast.classList.remove("show"), 1400);
+      }
+    </script>
+  </body>
+</html>

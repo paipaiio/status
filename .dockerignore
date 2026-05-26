@@ -1,0 +1,13 @@
+.git
+.env
+.env.*
+!.env.example
+node_modules
+runtime
+logs
+coverage
+dist
+.DS_Store
+*.log
+归档.zip
+README.html

@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>后台管理 / API 中转站状态检查</title>
+    <link rel="stylesheet" href="/styles.css?v=20260526-annotations-v1">
+    <link rel="stylesheet" href="/admin.css?v=20260526-admin-auth-v2">
+  </head>
+  <body>
+    <div class="admin-shell">
+      <header class="admin-topbar">
+        <a class="brand-lockup admin-brand" href="/" aria-label="返回状态首页">
+          <span class="brand-mark" aria-hidden="true">API</span>
+          <span>
+            <span class="eyebrow">Relay Monitor</span>
+            <span class="brand-subtitle">后台管理</span>
+          </span>
+        </a>
+
+        <nav class="admin-nav" aria-label="后台导航">
+          <a class="admin-nav-link" href="/">状态首页</a>
+          <button class="admin-logout" id="logoutButton" type="button" hidden>退出</button>
+        </nav>
+      </header>
+
+      <main class="admin-workspace">
+        <section class="admin-login-panel" id="loginView">
+          <form class="login-form" id="loginForm" autocomplete="off">
+            <div class="login-copy">
+              <p class="eyebrow">Admin Gate</p>
+              <h1>后台登录</h1>
+            </div>
+            <label>
+              <span>用户名</span>
+              <input id="username" name="username" type="text" autocomplete="username" required>
+            </label>
+            <label>
+              <span>密码</span>
+              <input id="password" name="password" type="password" autocomplete="current-password" required>
+            </label>
+            <button class="admin-primary" type="submit">登录</button>
+          </form>
+        </section>
+
+        <section class="admin-console" id="adminView" hidden>
+          <section class="target-form-panel">
+            <div class="panel-heading">
+              <p class="eyebrow">New Probe</p>
+              <h1>添加检测模型</h1>
+            </div>
+
+            <form class="target-form" id="targetForm" autocomplete="off">
+              <label class="wide-field">
+                <span>名称</span>
+                <input name="name" type="text" placeholder="MonkeyCoding Opus" maxlength="80" required>
+              </label>
+              <label>
+                <span>Base URL</span>
+                <input name="baseUrl" type="text" placeholder="api.example.com" required>
+              </label>
+              <label>
+                <span>模型</span>
+                <input name="model" type="text" placeholder="claude-opus-4-7" required>
+              </label>
+              <label class="wide-field">
+                <span>API Key</span>
+                <input name="apiKey" type="password" placeholder="sk-..." autocomplete="new-password" required>
+              </label>
+              <label>
+                <span>格式</span>
+                <select name="format">
+                  <option value="auto">auto</option>
+                  <option value="openai">openai</option>
+                  <option value="anthropic">anthropic</option>
+                </select>
+              </label>
+              <label>
+                <span>检查模式</span>
+                <select name="checkMode">
+                  <option value="auto">auto</option>
+                  <option value="models">models</option>
+                  <option value="chat">chat</option>
+                </select>
+              </label>
+              <label>
+                <span>间隔秒</span>
+                <input name="intervalSeconds" type="number" min="5" max="86400" placeholder="60">
+              </label>
+              <label>
+                <span>超时 ms</span>
+                <input name="timeoutMs" type="number" min="1000" max="120000" placeholder="12000">
+              </label>
+              <button class="admin-primary wide-field" type="submit">添加并开始检测</button>
+            </form>
+          </section>
+
+          <section class="managed-panel">
+            <div class="panel-heading">
+              <p class="eyebrow">Managed</p>
+              <h2>动态检测项</h2>
+            </div>
+            <div class="managed-list" id="managedList"></div>
+            <p class="managed-empty" id="managedEmpty" hidden>还没有动态添加的检测项。</p>
+          </section>
+
+          <section class="annotation-panel-admin">
+            <div class="panel-heading">
+              <p class="eyebrow">Annotations</p>
+              <h2>批注与通知</h2>
+            </div>
+
+            <div class="annotation-workspace">
+              <form class="annotation-form" id="annotationForm" autocomplete="off">
+                <label>
+                  <span>关联对象</span>
+                  <select name="targetId" id="annotationTarget">
+                    <option value="">全局状态页</option>
+                  </select>
+                </label>
+                <label>
+                  <span>级别</span>
+                  <select name="level">
+                    <option value="info">提示</option>
+                    <option value="warning">不稳定</option>
+                    <option value="critical">异常</option>
+                    <option value="success">恢复</option>
+                  </select>
+                </label>
+                <label class="wide-field">
+                  <span>标题</span>
+                  <input name="title" type="text" maxlength="120" placeholder="例如：上游线路波动" required>
+                </label>
+                <label class="wide-field">
+                  <span>批注内容</span>
+                  <textarea name="body" maxlength="1000" rows="5" placeholder="写给用户看的状态说明，避免包含密钥、完整请求体或敏感上游信息。" required></textarea>
+                </label>
+                <label class="checkbox-field wide-field">
+                  <input name="notify" type="checkbox" checked>
+                  <span>创建后同步到已配置通知 Webhook</span>
+                </label>
+                <div class="annotation-actions wide-field">
+                  <button class="admin-primary" type="submit">发布批注</button>
+                  <button class="admin-secondary" id="testNotificationButton" type="button">测试通知</button>
+                </div>
+              </form>
+
+              <section class="annotation-list-panel">
+                <div class="annotation-list-head">
+                  <h3>当前批注</h3>
+                  <button class="admin-secondary" id="refreshAnnotationsButton" type="button">刷新</button>
+                </div>
+                <div class="annotation-list" id="annotationList"></div>
+                <p class="managed-empty" id="annotationEmpty" hidden>还没有批注。</p>
+              </section>
+            </div>
+          </section>
+        </section>
+      </main>
+
+      <p class="admin-message" id="message" role="status" aria-live="polite"></p>
+    </div>
+
+    <template id="managedTargetTemplate">
+      <article class="managed-item">
+        <div>
+          <div class="managed-title-row">
+            <span class="status-dot"></span>
+            <h3 class="managed-name"></h3>
+            <span class="method-pill managed-format"></span>
+          </div>
+          <p class="managed-meta"></p>
+          <p class="managed-key"></p>
+        </div>
+        <button class="delete-target" type="button">删除</button>
+      </article>
+    </template>
+
+    <template id="annotationTemplate">
+      <article class="annotation-admin-item">
+        <div>
+          <div class="managed-title-row">
+            <span class="status-dot"></span>
+            <h3 class="annotation-title"></h3>
+            <span class="method-pill annotation-level"></span>
+          </div>
+          <p class="annotation-body"></p>
+          <p class="annotation-meta"></p>
+        </div>
+        <div class="annotation-item-actions">
+          <button class="resolve-annotation" type="button">解决</button>
+          <button class="delete-annotation" type="button">删除</button>
+        </div>
+      </article>
+    </template>
+
+    <script src="/admin.js?v=20260526-admin-auth-v2" defer></script>
+  </body>
+</html>

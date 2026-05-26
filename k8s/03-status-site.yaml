@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: status-site
+  namespace: api-relay-status
+  labels:
+    app: status-site
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: status-site
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: status-site
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: status-site
+          image: registry.example.com/api-relay-status:0.1.0
+          imagePullPolicy: IfNotPresent
+          command: ["node", "src/server.js"]
+          ports:
+            - name: http
+              containerPort: 3210
+          envFrom:
+            - configMapRef:
+                name: api-relay-status-config
+            - secretRef:
+                name: api-relay-status-secret
+          volumeMounts:
+            - name: status-data
+              mountPath: /data
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 192Mi
+            limits:
+              cpu: 1000m
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: status-data
+          persistentVolumeClaim:
+            claimName: status-data-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: status-site
+  namespace: api-relay-status
+  labels:
+    app: status-site
+spec:
+  selector:
+    app: status-site
+  ports:
+    - name: http
+      port: 3210
+      targetPort: http

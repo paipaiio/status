@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-relay-status-config
+  namespace: api-relay-status
+data:
+  NODE_ENV: "production"
+  HOST: "0.0.0.0"
+  PORT: "3210"
+  FRONTEND_ORIGIN: "https://status.example.com"
+  CHECK_INTERVAL_SECONDS: "60"
+  REQUEST_TIMEOUT_MS: "12000"
+  HISTORY_LIMIT: "24"
+  STATUS_HISTORY_FILE: "/data/runtime/status-history.json"
+  STATUS_HISTORY_RETENTION_DAYS: "30"
+  STATUS_HISTORY_LIMIT: "50000"
+  ANNOTATIONS_FILE: "/data/runtime/annotations.json"
+  MANAGED_TARGETS_FILE: "/data/config/targets.json"
+  ADMIN_SESSION_TTL_HOURS: "24"
+  NOTIFICATION_WEBHOOK_URLS: ""
+  NOTIFICATION_TIMEOUT_MS: "5000"
+  QQ_BOT_HOST: "0.0.0.0"
+  QQ_BOT_PORT: "3211"
+  QQ_BOT_PATH: "/onebot"
+  QQ_BOT_TRIGGER: "状态检查"
+  QQ_BOT_COOLDOWN_MS: "30000"
+  QQ_BOT_RUNTIME_DIR: "/data/qq-bot"
+  STATUS_PAGE_URL: "http://status-site:3210/?capture=qq"
+  CHROMIUM_BIN: "/usr/bin/chromium"
+  STATUS_SCREENSHOT_WIDTH: "1080"
+  STATUS_SCREENSHOT_HEIGHT: "1280"
+  STATUS_SCREENSHOT_WAIT_MS: "4500"
+  STATUS_CAPTURE_TIMEOUT_MS: "25000"
+  STATUS_CAPTURE_PER_PAGE: "4"
+  STATUS_CAPTURE_MAX_PAGES: "8"
+  STATUS_CAPTURE_WINDOW: "90m"
