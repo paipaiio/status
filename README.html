@@ -806,6 +806,50 @@ kubectl -n api-relay-status get pods,svc,pvc</code></pre>
             </div>
           </div>
 
+          <div class="table-scroll" style="margin-bottom: 14px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>项目</th>
+                  <th>值</th>
+                  <th>说明</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Deployment</td>
+                  <td><code>qq-status-bot</code></td>
+                  <td>由 <code>k8s/04-qq-bot.yaml</code> 创建，执行 <code>node src/qq-status-bot.js</code>。</td>
+                </tr>
+                <tr>
+                  <td>Service</td>
+                  <td><code>qq-status-bot:3211</code></td>
+                  <td>NapCat 反向 WebSocket 连接这个服务。</td>
+                </tr>
+                <tr>
+                  <td>OneBot 路径</td>
+                  <td><code>/onebot</code></td>
+                  <td>由 <code>QQ_BOT_PATH</code> 控制，默认 <code>/onebot</code>。</td>
+                </tr>
+                <tr>
+                  <td>健康检查</td>
+                  <td><code>/health</code></td>
+                  <td>K8s readiness/liveness 都用这个 HTTP 端点。</td>
+                </tr>
+                <tr>
+                  <td>PVC 路径</td>
+                  <td><code>/data/qq-bot</code></td>
+                  <td>截图临时文件 <code>status-*.png</code> 写在这里，发送后自动删除。</td>
+                </tr>
+                <tr>
+                  <td>截图来源</td>
+                  <td><code>STATUS_PAGE_URL</code></td>
+                  <td>默认 <code>http://status-site:3210/?capture=qq</code>，机器人在集群内访问状态站。</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
           <div class="grid">
             <article class="item">
               <h3>NapCat 在同一个 K8s 集群</h3>
@@ -830,6 +874,15 @@ kubectl -n api-relay-status get pods,svc,pvc</code></pre>
           <div class="notice" style="margin-top: 14px;">
             <strong>Token 配置</strong>
             <p>如果 <code>ONEBOT_SHARED_TOKEN</code> 非空，NapCat 也要配置同一个 access token。项目会校验 <code>Authorization: Bearer &lt;ONEBOT_SHARED_TOKEN&gt;</code>。</p>
+          </div>
+
+          <div class="code-wrap">
+            <span class="code-title">QQ 机器人验证命令</span>
+            <button class="copy" type="button" data-copy="#qqVerify">复制</button>
+            <pre id="qqVerify"><code>kubectl -n api-relay-status rollout status deploy/qq-status-bot
+kubectl -n api-relay-status logs deploy/qq-status-bot -f
+kubectl -n api-relay-status port-forward svc/qq-status-bot 3211:3211
+curl http://127.0.0.1:3211/health</code></pre>
           </div>
         </section>
 
